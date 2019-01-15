@@ -1,0 +1,267 @@
+---
+title: "EHD_Analysis"
+author: "Chrissy_casey"
+date: "January 6, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+
+HD<-read.csv("C:/Users/Chrysalis/Documents/clcasey/EHD/workingEHD.csv")
+
+#Binary Multiple Logistic Regression 
+# x = physiographic region: Appalachian Plateaus - yes(1), no(0)
+# y = EHD presence(1) or absence(0)
+
+#Removing empty columns
+HD$X.1<-NULL
+HD$X.2<-NULL
+
+#Converting all data to numeric
+
+HD$AP_status = as.numeric(HD$AP_status)
+HD$EHD_status = as.numeric(HD$EHD_status)
+
+colnames(HD)[colnames(HD)=="ï..State"] <- "state"
+
+y_hd<-HD$EHD_status
+x_ap<-HD$AP_status
+
+model1<-glm(y_ehd~x_ap,binomial)
+summary(model1)# see below
+
+OR<-exp(coef(model1))
+OR
+#OR<-exp(1.40841)
+#OR = 4.089448  EHD is 4 times more likely to occur in Appalachian Plateaus than not in the Appalachian Plateaus
+
+CI<-exp(confint.default(model1))
+CI
+#                2.5 %    97.5 %
+# x_ap        3.0983162 5.3976011
+
+anova(model1, test="Chisq")
+
+```
+Call:
+glm(formula = y_ehd ~ x_ap, family = binomial)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.2789  -0.7343  -0.7343   1.0792   1.6986  
+
+Coefficients:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept) -1.17295    0.06489 -18.077   <2e-16 ***
+x_ap         1.40841    0.14161   9.946   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1889.8  on 1571  degrees of freedom
+Residual deviance: 1790.6  on 1570  degrees of freedom
+AIC: 1794.6
+
+Number of Fisher Scoring iterations: 4
+
+Analysis of Deviance Table
+
+Model: binomial, link: logit
+
+Response: y_ehd
+
+Terms added sequentially (first to last)
+
+
+     Df Deviance Resid. Df Resid. Dev  Pr(>Chi)    
+NULL                  1571     1889.8              
+x_ap  1   99.233      1570     1790.5 < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+```{r}
+library(ggplot2)
+library(msm)
+library(sandwich)
+
+PGR<-as.factor(HD$PGR_Major)
+PGR.f<-HD$PGR_Major
+
+
+model2<-glm(y_hd~PGR)
+summary(model2)
+
+#model2: significant physiogeographic region: Appalachian Plateaus, Blue Ridge, Rigde and Valley
+
+
+minmodelAP<-glm(HD$HD_min~HD$AP_status)
+summary(minmodelAP)
+
+minmodelALL<-glm(HD$HD_min~PGR)
+summary(minmodelALL)
+
+
+
+```
+summary(PGR)
+PHYSGEO REG:  1   2   4   6   7  11  14  17  19  22  23  24 
+Num counties  7 210  41 352 435 145  64   1 183   4  28 102 
+
+1 = adirondack
+2 = Appalachian Plateaus
+4 = Blue Ridge 
+6 = Central Lowland
+7 = Coastal Plain
+11 = Interior Low Plataues
+14 = New England
+17 = Ozark Plateaus
+19 = Piedmont
+22= St. Lawrence Valley
+23= Superior Upland
+24= Valley & Ridge
+
+#Summary for Model based on physiogeographic Region and all HD report
+glm(formula = y_hd ~ PGR)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-0.5769  -0.1935  -0.1643   0.4231   0.9219  
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -1.546e-15  1.499e-01   0.000 1.000000    
+PGR2         5.769e-01  1.528e-01   3.777 0.000165 *** #  SIGNIFIGANT
+PGR4         4.390e-01  1.639e-01   2.679 0.007463 **  #  SIGNIFIGANT
+PGR6         1.643e-01  1.516e-01   1.084 0.278595    
+PGR7         1.935e-01  1.513e-01   1.279 0.200944    
+PGR11        3.239e-01  1.581e-01   2.049 0.040662 *   #  SIGNIFIGANT
+PGR14        7.812e-02  1.590e-01   0.491 0.623242    
+PGR17        1.000e+00  4.497e-01   2.224 0.026316 *   #  SIGNIFIGANT
+PGR19        3.043e-01  1.531e-01   1.988 0.047038 *   #  SIGNIFIGANT
+PGR22       -4.086e-15  2.596e-01   0.000 1.000000    
+PGR23        9.149e-16  1.707e-01   0.000 1.000000    
+PGR24        5.028e-01  1.533e-01   3.281 0.001057 **  #  SIGNIFIGANT
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.179771)
+
+    Null deviance: 322.88  on 1571  degrees of freedom
+Residual deviance: 280.44  on 1560  degrees of freedom
+AIC: 1777.4
+
+#Summary of model with HD reports excluding criteria 4 and just AP_status
+Call:
+glm(formula = HD$HD_min ~ HD$AP_status)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-0.5430  -0.1991  -0.1991   0.4570   0.8009  
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)    0.1991     0.0115   17.31   <2e-16 ***
+HD$AP_status   0.3439     0.0285   12.06   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for gaussian family taken to be 0.1741186)
+
+    Null deviance: 298.71  on 1571  degrees of freedom
+Residual deviance: 273.37  on 1570  degrees of freedom
+AIC: 1717.3
+
+Number of Fisher Scoring iterations: 2
+
+
+```{r}
+library(usmap)
+library(ggplot2)
+
+plot_usmap(data=HD, values = "EHD_status", regions = "counties", include = c("FL", "GA", "AL", "SC", "VA","NC","MS","NC","TN","KY","IN","IL","WV","MD","MA","ME","MI","NH","RI","VT","DE","CT","NJ","NY","PA","OH","WI"), lines = "black")+ 
+  scale_fill_continuous(low = "white", high = "red", name = "HD Reported", label = scales::comma) + 
+  theme(legend.position = "right") + labs(title = "HD Reports by County in Eastern US States, 2017")
+```
+
+```{r}
+
+HD$PGR_Major=as.factor(HD$PGR_Major)
+
+colors <- c("maroon", "darkgreen", "blue", "yellow", "darkorange1", "purple", "mediumspringgreen","magenta","cyan","gold","lightsteelblue","red")
+names(colors) = c("Adirondack", "Appalachian_Plateaus", "Blue_Ridge", "Central_Lowland","Coastal_Plain","Interior_Low_Plateaus","New_England","Ozark_Plateaus","Piedmont","StLawrence_Valley","Superior_Upland","Ridge_Valley")
+
+plot_usmap(data=HD, values = "PGR_Major", regions = "counties", include = c("FL", "GA", "AL", "SC", "VA","NC","MS","NC","TN","KY","IN","IL","WV","MD","MA","ME","MI","NH","RI","VT","DE","CT","NJ","NY","PA","OH","WI"), lines = "black")+ scale_fill_manual(values=colors)+theme(legend.position = "right")
+
+```
+```{r}
+library(ggplot2)
+library(maps)
+
+# Load the county data from the maps package
+eastUS <- map_data("county","alabama")
+
+# Plot the counties
+#ggplot(cnty, aes(long,lat, group = group)) + 
+#  geom_polygon(aes(fill = region), colour = rgb(1,1,1,0.2)) + 
+#  theme(legend.position="none") +
+#  coord_quickmap()
+```
+
+```{r}
+
+### Test for correlation examples NEED to edit to make working code
+#library(PerformanceAnalytics)
+
+#chart.Correlation(workingEHD, 
+#                  method="spearman",
+#                  histogram=TRUE,
+#                  pch=16)
+
+#library(psych)
+
+#corr.test(workingEHD, 
+#          use = "pairwise",
+#          method="spearman",
+#          adjust="none",      
+#          alpha=.05)
+
+#TESTING regression examples models
+#model.null = glm(Status ~ 1, 
+#                 data=Data.omit,
+#                 family = binomial(link="logit")
+#                 )
+
+#model.full = glm(Status ~ Length + Mass + Range + Migr + Insect + Diet + Clutch + Broods + Wood + Upland + Water + Release + Indiv,
+#                 data=Data.omit,
+#                 family = binomial(link="logit")
+#                 )
+     
+#step(model.null,
+#     scope = list(upper=model.full),
+#             direction="both",
+#             test="Chisq",
+#             data=Data)
+```
+
+```{r}
+#UTM coordinates 
+#df <- data.frame(workingEHD$Lat, workingEHD$Long)
+#df$X <- df$workingEHD.Long
+#df$Y <- df$workingEHD.Lat
+#df <- df[-c(1,2)]
+#df
+
+#LongLatToUTM<-function(x,y,zone){
+# xy <- data.frame(ID = 1:length(x), X = x, Y = y)
+#  coordinates(xy) <- c("X", "Y")
+#  proj4string(xy) <- CRS("+proj=longlat +datum=WGS84")  ## for example
+#  res <- spTransform(xy, CRS(paste("+proj=utm +zone=",zone," ellps=WGS84",sep='')))
+#  return(as.data.frame(res))
+#}
+
+# new.df <- LongLatToUTM(x=df$X, y=df$Y, 16)# How can I make it include more than one zone?
+```
